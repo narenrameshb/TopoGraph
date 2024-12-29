@@ -1,42 +1,97 @@
 import networkx as nx
 import matplotlib.pyplot as plt
-from typing import List, Set, Dict, Any, Optional
-from ..graph import Graph
+from typing import List, Set, Dict, Any, Optional, Union
+from src.main.graph import Graph
 
 
 def visualize_graph(graph: Graph,
                     title: str = "Graph Visualization",
-                    node_color: str = 'lightblue',
+                    node_color: Union[str, List[str]] = 'lightblue',
                     node_size: int = 500,
-                    with_labels: bool = True) -> None:
+                    with_labels: bool = True,
+                    highlight_nodes: Optional[List[Any]] = None,
+                    highlight_color: str = 'lightgreen',
+                    highlight_edges: Optional[List[tuple]] = None,
+                    edge_color_default: str = 'gray',
+                    edge_color_highlight: str = 'red',
+                    edge_width_default: float = 1.0,
+                    edge_width_highlight: float = 2.0,
+                    figsize: tuple = (10, 8)) -> None:
     """
-    Visualize a graph using networkx and matplotlib.
+    Visualize a graph with optional highlighting of specific nodes and edges.
 
     Args:
         graph: The graph to visualize
         title: Title of the plot
-        node_color: Color of the nodes
+        node_color: Color(s) for nodes (default or list for each node)
         node_size: Size of the nodes
         with_labels: Whether to show vertex labels
+        highlight_nodes: List of nodes to highlight
+        highlight_color: Color for highlighted nodes
+        highlight_edges: List of edges to highlight
+        edge_color_default: Color for regular edges
+        edge_color_highlight: Color for highlighted edges
+        edge_width_default: Width for regular edges
+        edge_width_highlight: Width for highlighted edges
+        figsize: Figure size as (width, height)
     """
-    # Convert our graph to networkx format
+    # Convert to networkx format
     G = nx.Graph()
-
-    # Add all edges
     G.add_edges_from(graph.get_edges())
 
-    # Create the visualization
-    plt.figure(figsize=(10, 8))
-    pos = nx.spring_layout(G)  # Position nodes using spring layout
+    # Add any isolated vertices
+    for vertex in graph.get_vertices():
+        if vertex not in G:
+            G.add_node(vertex)
 
-    nx.draw(G, pos,
-            with_labels=with_labels,
-            node_color=node_color,
-            node_size=node_size,
-            font_size=16,
-            font_weight='bold')
+    # Set up the plot
+    plt.figure(figsize=figsize)
+    pos = nx.spring_layout(G, k=1, iterations=50)  # k=1 for more spread out layout
 
-    plt.title(title)
+    # Draw regular edges
+    if highlight_edges:
+        regular_edges = [e for e in G.edges if e not in highlight_edges
+                         and tuple(reversed(e)) not in highlight_edges]
+        nx.draw_networkx_edges(G, pos,
+                               edgelist=regular_edges,
+                               edge_color=edge_color_default,
+                               width=edge_width_default)
+        # Draw highlighted edges
+        nx.draw_networkx_edges(G, pos,
+                               edgelist=highlight_edges,
+                               edge_color=edge_color_highlight,
+                               width=edge_width_highlight)
+    else:
+        nx.draw_networkx_edges(G, pos,
+                               edge_color=edge_color_default,
+                               width=edge_width_default)
+
+    # Draw regular nodes
+    if highlight_nodes:
+        regular_nodes = [n for n in G.nodes if n not in highlight_nodes]
+        nx.draw_networkx_nodes(G, pos,
+                               nodelist=regular_nodes,
+                               node_color=node_color,
+                               node_size=node_size)
+        # Draw highlighted nodes
+        nx.draw_networkx_nodes(G, pos,
+                               nodelist=highlight_nodes,
+                               node_color=highlight_color,
+                               node_size=node_size)
+    else:
+        nx.draw_networkx_nodes(G, pos,
+                               node_color=node_color,
+                               node_size=node_size)
+
+    # Add labels if requested
+    if with_labels:
+        nx.draw_networkx_labels(G, pos,
+                                font_size=12,
+                                font_weight='bold')
+
+    plt.title(title, pad=20)
+    plt.axis('off')  # Hide axes
+    plt.tight_layout()
     plt.show()
 
 
@@ -54,88 +109,47 @@ def visualize_path(graph: Graph,
     if len(path) < 2:
         raise ValueError("Path must contain at least 2 vertices")
 
-    # Convert graph to networkx format
-    G = nx.Graph()
-    G.add_edges_from(graph.get_edges())
-
-    # Create path edges list
+    # Create path edges
     path_edges = list(zip(path[:-1], path[1:]))
 
-    # Set up the plot
-    plt.figure(figsize=(10, 8))
-    pos = nx.spring_layout(G)
-
-    # Draw the regular edges
-    nx.draw_networkx_edges(G, pos,
-                           edgelist=[e for e in G.edges if e not in path_edges],
-                           edge_color='gray')
-
-    # Draw the path edges
-    nx.draw_networkx_edges(G, pos,
-                           edgelist=path_edges,
-                           edge_color='red',
-                           width=2)
-
-    # Draw all nodes
-    nx.draw_networkx_nodes(G, pos,
-                           node_color='lightblue',
-                           node_size=500)
-
-    # Highlight path nodes
-    nx.draw_networkx_nodes(G, pos,
-                           nodelist=path,
-                           node_color='lightgreen',
-                           node_size=500)
-
-    # Add labels
-    nx.draw_networkx_labels(G, pos,
-                            font_size=16,
-                            font_weight='bold')
-
-    plt.title(title)
-    plt.show()
+    # Use the general visualization function with highlighting
+    visualize_graph(graph,
+                    title=title,
+                    highlight_nodes=path,
+                    highlight_edges=path_edges,
+                    node_color='lightblue',
+                    highlight_color='lightgreen',
+                    edge_color_default='gray',
+                    edge_color_highlight='red')
 
 
 def visualize_components(graph: Graph,
                          components: List[Set[Any]],
                          title: str = "Connected Components") -> None:
     """
-    Visualize connected components in different colors.
+    Visualize connected components using different colors.
 
     Args:
         graph: The graph to visualize
         components: List of sets, where each set contains vertices in a component
         title: Title of the plot
     """
-    # Convert graph to networkx format
-    G = nx.Graph()
-    G.add_edges_from(graph.get_edges())
-
-    # Set up the plot
-    plt.figure(figsize=(10, 8))
-    pos = nx.spring_layout(G)
-
-    # Create a color map for nodes
+    # Create color map for nodes
+    colors = ['lightblue', 'lightgreen', 'salmon', 'yellow', 'lightgray',
+              'lightpink', 'lightyellow', 'lightcyan']
     color_map = []
-    colors = ['lightblue', 'lightgreen', 'salmon', 'yellow', 'lightgray']
+    vertices = list(graph.get_vertices())
 
-    for vertex in G.nodes():
-        # Find which component the vertex belongs to
+    # Assign colors to vertices based on their component
+    for vertex in vertices:
         for i, component in enumerate(components):
             if vertex in component:
                 color_map.append(colors[i % len(colors)])
                 break
 
-    # Draw the graph
-    nx.draw(G, pos,
-            node_color=color_map,
-            with_labels=True,
-            node_size=500,
-            font_size=16,
-            font_weight='bold')
-
-    plt.title(title)
-    plt.show()
+    visualize_graph(graph,
+                    title=title,
+                    node_color=color_map)
 
 
 def visualize_cycle(graph: Graph,
@@ -152,43 +166,45 @@ def visualize_cycle(graph: Graph,
     if len(cycle) < 3:
         raise ValueError("Cycle must contain at least 3 vertices")
 
-    # Convert graph to networkx format
-    G = nx.Graph()
-    G.add_edges_from(graph.get_edges())
-
-    # Create cycle edges list (including closing edge)
+    # Create cycle edges (including closing edge)
     cycle_edges = list(zip(cycle, cycle[1:] + [cycle[0]]))
 
-    # Set up the plot
-    plt.figure(figsize=(10, 8))
-    pos = nx.spring_layout(G)
+    # Use the general visualization function with highlighting
+    visualize_graph(graph,
+                    title=title,
+                    highlight_nodes=cycle,
+                    highlight_edges=cycle_edges,
+                    node_color='lightblue',
+                    highlight_color='lightgreen',
+                    edge_color_default='gray',
+                    edge_color_highlight='red')
 
-    # Draw regular edges
-    nx.draw_networkx_edges(G, pos,
-                           edgelist=[e for e in G.edges if e not in cycle_edges],
-                           edge_color='gray')
 
-    # Draw cycle edges
-    nx.draw_networkx_edges(G, pos,
-                           edgelist=cycle_edges,
-                           edge_color='red',
-                           width=2)
+def visualize_search_tree(graph: Graph,
+                          tree: Dict[Any, List[Any]],
+                          root: Any,
+                          title: str = "Search Tree Visualization") -> None:
+    """
+    Visualize a search tree (BFS or DFS) within the graph.
 
-    # Draw all nodes
-    nx.draw_networkx_nodes(G, pos,
-                           node_color='lightblue',
-                           node_size=500)
+    Args:
+        graph: The original graph
+        tree: Dictionary representing the tree (output of get_search_tree)
+        root: Root vertex of the tree
+        title: Title of the plot
+    """
+    # Create tree edges
+    tree_edges = []
+    for parent, children in tree.items():
+        tree_edges.extend((parent, child) for child in children)
 
-    # Highlight cycle nodes
-    nx.draw_networkx_nodes(G, pos,
-                           nodelist=cycle,
-                           node_color='lightgreen',
-                           node_size=500)
-
-    # Add labels
-    nx.draw_networkx_labels(G, pos,
-                            font_size=16,
-                            font_weight='bold')
-
-    plt.title(title)
-    plt.show()
+    # Use the general visualization function with highlighting
+    visualize_graph(graph,
+                    title=title,
+                    highlight_nodes=[root],  # Highlight root node
+                    highlight_edges=tree_edges,
+                    node_color='lightblue',
+                    highlight_color='lightgreen',
+                    edge_color_default='gray',
+                    edge_color_highlight='blue',
+                    edge_width_highlight=1.5)

@@ -1,25 +1,11 @@
-from typing import List, Set, Dict, Any, Optional, Tuple
 from collections import deque
-from ..graph import Graph
+from typing import List, Dict, Any, Optional
+
+from src.main.graph import Graph
 
 
 def breadth_first_search(graph: Graph, start: Any) -> Dict[str, Any]:
-    """
-    Perform breadth-first search starting from a given vertex.
-
-    Args:
-        graph: The graph to search
-        start: Starting vertex
-
-    Returns:
-        Dict containing:
-            'visited_order': List of vertices in order they were visited
-            'distances': Dict of distances from start to each vertex
-            'predecessors': Dict of each vertex's predecessor in BFS tree
-
-    Raises:
-        KeyError: If start vertex is not in graph
-    """
+    """Perform breadth-first search starting from a given vertex."""
     if start not in graph.get_vertices():
         raise KeyError(f"Start vertex {start} not found in graph")
 
@@ -33,7 +19,7 @@ def breadth_first_search(graph: Graph, start: Any) -> Dict[str, Any]:
         visited_order.append(current)
 
         for neighbor in graph.get_neighbors(current):
-            if neighbor not in distances:  # Unvisited neighbor
+            if neighbor not in distances:
                 distances[neighbor] = distances[current] + 1
                 predecessors[neighbor] = current
                 queue.append(neighbor)
@@ -46,23 +32,7 @@ def breadth_first_search(graph: Graph, start: Any) -> Dict[str, Any]:
 
 
 def depth_first_search(graph: Graph, start: Any) -> Dict[str, Any]:
-    """
-    Perform depth-first search starting from a given vertex.
-
-    Args:
-        graph: The graph to search
-        start: Starting vertex
-
-    Returns:
-        Dict containing:
-            'visited_order': List of vertices in order they were visited
-            'discovery_times': Dict of when each vertex was discovered
-            'finish_times': Dict of when each vertex was finished
-            'predecessors': Dict of each vertex's predecessor in DFS tree
-
-    Raises:
-        KeyError: If start vertex is not in graph
-    """
+    """Perform depth-first search starting from a given vertex."""
     if start not in graph.get_vertices():
         raise KeyError(f"Start vertex {start} not found in graph")
 
@@ -73,14 +43,13 @@ def depth_first_search(graph: Graph, start: Any) -> Dict[str, Any]:
     time = 0
 
     def dfs_visit(vertex: Any) -> None:
-        """Helper function for DFS recursion."""
         nonlocal time
         time += 1
         discovery_times[vertex] = time
         visited_order.append(vertex)
 
         for neighbor in graph.get_neighbors(vertex):
-            if neighbor not in discovery_times:  # Unvisited neighbor
+            if neighbor not in discovery_times:
                 predecessors[neighbor] = vertex
                 dfs_visit(neighbor)
 
@@ -98,20 +67,14 @@ def depth_first_search(graph: Graph, start: Any) -> Dict[str, Any]:
 
 
 def find_path_bfs(graph: Graph, start: Any, end: Any) -> Optional[List[Any]]:
-    """
-    Find shortest path between start and end vertices using BFS.
+    """Find shortest path between start and end vertices using BFS."""
+    if start not in graph.get_vertices():
+        raise KeyError(f"Start vertex {start} not found in graph")
 
-    Args:
-        graph: The graph to search
-        start: Starting vertex
-        end: Ending vertex
+    # Return None if end vertex doesn't exist
+    if end not in graph.get_vertices():
+        return None
 
-    Returns:
-        List of vertices forming shortest path if one exists, None otherwise
-
-    Raises:
-        KeyError: If either vertex is not in graph
-    """
     result = breadth_first_search(graph, start)
     predecessors = result['predecessors']
 
@@ -129,31 +92,17 @@ def find_path_bfs(graph: Graph, start: Any, end: Any) -> Optional[List[Any]]:
 
 
 def find_all_paths_dfs(graph: Graph, start: Any, end: Any) -> List[List[Any]]:
-    """
-    Find all possible paths between start and end vertices using DFS.
-
-    Args:
-        graph: The graph to search
-        start: Starting vertex
-        end: Ending vertex
-
-    Returns:
-        List of all possible paths from start to end
-
-    Raises:
-        KeyError: If either vertex is not in graph
-    """
+    """Find all possible paths between start and end vertices using DFS."""
     if start not in graph.get_vertices() or end not in graph.get_vertices():
         raise KeyError("Start or end vertex not found in graph")
 
     def dfs_paths(current: Any, path: List[Any], paths: List[List[Any]]) -> None:
-        """Helper function for DFS path finding."""
         if current == end:
             paths.append(path[:])
             return
 
         for neighbor in graph.get_neighbors(current):
-            if neighbor not in path:  # Avoid cycles
+            if neighbor not in path:
                 path.append(neighbor)
                 dfs_paths(neighbor, path, paths)
                 path.pop()
@@ -164,15 +113,7 @@ def find_all_paths_dfs(graph: Graph, start: Any, end: Any) -> List[List[Any]]:
 
 
 def get_search_tree(predecessors: Dict[Any, Any]) -> Dict[Any, List[Any]]:
-    """
-    Convert predecessors dictionary to a tree representation.
-
-    Args:
-        predecessors: Dictionary of vertex predecessors
-
-    Returns:
-        Dictionary representing tree where keys are vertices and values are their children
-    """
+    """Convert predecessors dictionary to a tree representation."""
     tree = {vertex: [] for vertex in predecessors}
 
     for vertex, pred in predecessors.items():
